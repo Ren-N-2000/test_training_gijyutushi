@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>技術士試験トレーニング</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 650px; margin: auto; }
+    .choice { margin: 10px 0; }
+    button { padding: 10px; width: 100%; margin-top: 5px; }
+    .result { margin-top: 20px; font-weight: bold; }
+    .next-btn, .mode-select { margin-top: 30px; text-align: center; }
+    #explanation { margin-top: 10px; background: #f0f0f0; padding: 10px; display: none; }
+  </style>
+</head>
+<body>
+  <h1>技術士試験トレーニング</h1>
+
+  <h2 id="question"></h2>
+  <div id="choices"></div>
+  <div class="result" id="result"></div>
+  <button id="explainBtn" onclick="showExplanation()" style="display:none;">解説を見る</button>
+  <div id="explanation"></div>
+  <div class="next-btn">
+    <button onclick="nextQuestion()">次の問題へ</button>
+  </div>
+
+<script>
+  // モード取得（★最初に実行すること）
+  function getModeFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') || 'basic';
+  }
+  const mode = getModeFromURL();
+
+  const questions = [];
+
+  // 問題データ（6問だけ例示。以降自由に追加可）
+  questions.push(
+    {
+      level: "basic",
+      question: "鋼構造物の溶接継手の設計上の留意点に関する記述のうち、最も不適切なものはどれか？",
+      choices: [
+        "溶接箇所はできるだけ少なくし, 溶接量も必要最小限とする。",
+        "衝撃や繰返し応力を受ける継手はできるだけ全断面溶込みループ (開先) 溶接にする。",
+        "溶接継手の組立方法, 溶接順序を十分考慮し,できるだけ上向き溶接が可能な構造とする。",
+        "連結部の構造はなるべく単純にし,応力の伝達を明確にする。 溶接の集中,交差は避け,必要に応じてスカラップ(切欠き)を設ける。",
+        "構成する各材片においてなるべく偏心がないようにし,できるだけ板厚差の少ない組合せを考える。"
+      ],
+      answer: "溶接継手の組立方法, 溶接順序を十分考慮し,できるだけ上向き溶接が可能な構造とする。",
+      explanation: "上向き溶接は施工性が悪く、ミスの原因となるため避けるべきです。"
+    },
+    {
+      level: "basic",
+      question: "鋼橋の維持管理に関する次の記述のうち、最も不適切なものはどれか？",
+      choices: [
+        "支承周りなどの滞水が生じやすい箇所では鋼材の腐食が進行しやすい。",
+        "部材連結部においてF11T以外の高力ボルトが使われている場合, ボルトの遅れ破壊の危険性がある。",
+        "構造物に自動車, 列車などの活荷重, 風などの外力が繰返し作用すると,溶接継手や溶接欠陥などの応力集中部に疲労き裂が発生することがある。",
+        "塗装においては,鋼材表面さびを除去し, 付着している有害物質の除去と層間付着性を良くするための面粗しを行う。",
+        "き裂の溶接補修においては, 再溶接による残留応力, ひずみの増加、新たな溶接欠陥の発生など損傷発生前の状態よりも疲労強度が劣る場合がある。"
+      ],
+      answer: "部材連結部においてF11T以外の高力ボルトが使われている場合, ボルトの遅れ破壊の危険性がある。",
+      explanation: "F11Tも遅れ破壊の危険性があるため、記述が限定的すぎて不適切と判断されます。"
+    }
+  );
+
+  let currentIndex = 0;
+
+  function shuffle(array) {
+    return array
+      .map(value => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value);
+  }
+
+  function applyAdvancedMode(originalChoices, correctAnswer) {
+    const modifiedChoices = [];
+    const replacements = [
+      ["上向き", "下向き"],
+      ["必要最小限", "必要以上"],
+      ["除去", "残存"],
+      ["良くする", "悪くする"],
+      ["避け", "集中し"],
+      ["少ない", "多い"],
+      ["明確に", "不明確に"],
+      ["可能", "困難"]
+    ];
+    let newCorrect = correctAnswer;
+    if (Math.random() < 0.5) {
+      for (const [from, to] of replacements) {
+        if (correctAnswer.includes(from)) {
+          newCorrect = correctAnswer.replace(from, to);
+          break;
+        }
+      }
+    }
+    for (let choice of originalChoices) {
+      if (choice === correctAnswer) {
+        modifiedChoices.push(newCorrect);
+      } else if (Math.random() < 0.3) {
+        modifiedChoices.push(correctAnswer);
+      } else {
+        modifiedChoices.push(choice);
+      }
+    }
+    return { choices: modifiedChoices, answer: newCorrect };
+  }
+
+  function showQuestion() {
+    const filtered = questions.filter(q => q.level === mode);
+    const q = filtered[currentIndex % filtered.length];
+    const questionElem = document.getElementById('question');
+    const choicesElem = document.getElementById('choices');
+    const resultElem = document.getElementById('result');
+    const explainBtn = document.getElementById('explainBtn');
+    const explanation = document.getElementById('explanation');
+
+    resultElem.textContent = '';
+    explanation.style.display = "none";
+    explanation.textContent = '';
+    explainBtn.style.display = "none";
+    choicesElem.innerHTML = '';
+
+    questionElem.textContent = "Q. " + q.question;
+
+    let finalChoices = [...q.choices];
+    let correct = q.answer;
+
+    if (mode === "advanced") {
+      const result = applyAdvancedMode(finalChoices, correct);
+      finalChoices = result.choices;
+      correct = result.answer;
+    }
+
+    const shuffled = shuffle(finalChoices);
+
+    shuffled.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.textContent = choice;
+      btn.className = 'choice';
+      btn.onclick = () => {
+        resultElem.textContent = (choice === correct)
+          ? "✅ 正解！"
+          : "❌ 不正解。正解は「" + correct + "」";
+        resultElem.style.color = (choice === correct) ? "green" : "red";
+        explainBtn.style.display = "inline-block";
+      };
+      choicesElem.appendChild(btn);
+    });
+  }
+
+  function nextQuestion() {
+    currentIndex++;
+    showQuestion();
+  }
+
+  function showExplanation() {
+    const filtered = questions.filter(q => q.level === mode);
+    const q = filtered[currentIndex % filtered.length];
+    const explanation = document.getElementById('explanation');
+    explanation.style.display = "block";
+    explanation.textContent = "🧠 ChatGPT解説: " + q.explanation;
+  }
+
+  // 初回表示
+  showQuestion();
+</script>
+</body>
+</html>
