@@ -529,10 +529,12 @@ questions.push({
     });
   }
 
-  function nextQuestion() {
-    currentIndex++;
-    showQuestion();
-  }
+function nextQuestion() {
+  const filtered = questions.filter(q => q.level === mode);
+  currentIndex = Math.floor(Math.random() * filtered.length);
+  showQuestion();
+}
+
 
   function showExplanation() {
     const filtered = questions.filter(q => q.level === mode);
